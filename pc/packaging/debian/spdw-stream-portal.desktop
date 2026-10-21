@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=MockRt:Core Stream Portal
+GenericName=GameCube/Wii streaming portal
+Comment=Library, Sunshine and autostart control for streaming GameCube/Wii games to the handheld
+Exec=spdw-stream-portal
+Icon=spdw-stream-portal
+Terminal=false
+Categories=Game;Utility;
+Keywords=dolphin;sunshine;moonlight;gamecube;wii;stream;muos;
+StartupNotify=false

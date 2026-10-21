@@ -1,0 +1,71 @@
+# Runtime state
+conf/*.tsv
+conf/*.log
+conf/*.done
+conf/*.status
+conf/*.result
+conf/*.txt
+conf/*.pid
+conf/stream.conf
+conf/ui.cfg
+conf/state.txt
+conf/input.cfg
+conf/profiles.tsv
+conf/library.tsv
+conf/diagnostics.txt
+conf/diskspace.txt
+conf/latency.txt
+conf/sunshine_verify.txt
+conf/kbtest.log
+muos/DolphinStream/conf/*.tsv
+muos/DolphinStream/conf/*.log
+muos/DolphinStream/conf/*.done
+muos/DolphinStream/conf/*.status
+muos/DolphinStream/conf/*.result
+muos/DolphinStream/conf/*.txt
+muos/DolphinStream/conf/*.pid
+muos/DolphinStream/conf/stream.conf
+muos/DolphinStream/conf/ui.cfg
+muos/DolphinStream/conf/state.txt
+muos/DolphinStream/conf/input.cfg
+muos/DolphinStream/conf/profiles.tsv
+muos/DolphinStream/conf/library.tsv
+muos/DolphinStream/launch.txt
+muos/DolphinStream/launch.env
+
+# Secrets
+keys/
+*.pem
+*.p12
+*.key
+uniqueid.dat
+
+# Local binaries (not redistributed)
+libs/
+moonlight/
+love
+
+# Cover cache
+muos/DolphinStream/covers/*.png
+!muos/DolphinStream/covers/.gitkeep
+
+# Build artefacts
+dist/
+*.deb
+*.zip
+*.tgz
+__pycache__/
+*.pyc
+*.pyo
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Backups
+*.bak
+*.orig
+*~
