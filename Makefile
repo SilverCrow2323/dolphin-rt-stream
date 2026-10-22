@@ -23,3 +23,11 @@ version:
 
 clean:
 	rm -rf dist
+
+tarball:
+	@VERSION=$$(cat VERSION); \
+	mkdir -p dist && \
+	tar czf dist/spdw-stream-portal_$${VERSION}_portable.tar.gz \
+	  -C pc portal profiles assets packaging standalone \
+	  ../README.md ../LICENSE ../CHANGELOG.md
+	@echo "built dist/spdw-stream-portal_$$(cat VERSION)_portable.tar.gz"

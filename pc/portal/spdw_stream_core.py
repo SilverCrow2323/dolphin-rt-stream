@@ -48,6 +48,7 @@ DEFAULTS = {
     "scan_on_start": True,          # rescan ROM folders every time the portal opens
     "display_mode": "1280x960",     # 4:3 mode while streaming ("" = keep the current mode)
     "prep_do": "", "prep_undo": "",
+    "show_splash": True,
     "sunshine_apps": "~/.config/sunshine/apps.json",
     "port": 8765,
     "library": "~/.local/share/spdw-stream/library",
@@ -770,6 +771,7 @@ def main():
     cl.add_argument("what", choices=["covers"], nargs="?", default="covers")
 
     sub.add_parser("preflight", help="run all system checks (exit 1 on critical failure)")
+    sub.add_parser("test-connection", help="ping LAN/WAN, check ports, suggest tuning")
 
     args = ap.parse_args()
     cfg = load_config()
@@ -881,6 +883,8 @@ def main():
                 f.unlink()
                 removed += 1
         say(f"removed {removed} orphan cover(s), freed {freed // 1024} KB")
+    elif args.cmd == "test-connection":
+        sys.exit(connection_test_print(load_config()))
     elif args.cmd == "preflight":
         cfg = load_config()
         bad = 0
@@ -892,6 +896,131 @@ def main():
         if bad:
             sys.exit(f"\n! {bad} critical issue(s)")
         say("\nall critical checks passed")
+
+
+
+
+# ------------------------------------------------------------------ connection test
+def connection_test(cfg, log=say):
+    """Test local connectivity and give tuning advice.
+    Returns (checks, advice) where checks is a list of (label, state, detail)
+    and advice is a list of (severity, text) suggested settings."""
+    checks = []
+    advice = []
+
+    # --- 1. ping gateway (LAN)
+    import subprocess, socket as _sock
+    def _ping(target, count=4, timeout=1):
+        try:
+            r = subprocess.run(["ping", "-c", str(count), "-W", str(timeout), target],
+                               capture_output=True, text=True, timeout=count * (timeout + 1) + 2)
+            out = r.stdout
+            import re as _re
+            m = _re.search(r"rtt min/avg/max/mdev = ([\d.]+)/([\d.]+)/([\d.]+)/([\d.]+)", out)
+            loss_m = _re.search(r"(\d+(?:\.\d+)?)% packet loss", out)
+            if m:
+                return {"min": float(m.group(1)), "avg": float(m.group(2)),
+                        "max": float(m.group(3)), "loss": float(loss_m.group(1)) if loss_m else 0.0}
+            return {"error": "no rtt in output"}
+        except FileNotFoundError:
+            return {"error": "ping not installed"}
+        except subprocess.TimeoutExpired:
+            return {"error": "timeout"}
+
+    # gateway
+    try:
+        out = subprocess.run(["ip", "route", "show", "default"], capture_output=True, text=True, timeout=2).stdout
+        gw = out.split()[2] if out and len(out.split()) > 2 else ""
+    except Exception:
+        gw = ""
+    if gw:
+        g = _ping(gw, count=3)
+        if "error" in g:
+            checks.append(("LAN latency (gateway)", "warn", f"ping failed: {g['error']}"))
+        else:
+            state = "ok" if g["avg"] < 10 and g["loss"] == 0 else ("warn" if g["avg"] < 30 else "bad")
+            checks.append(("LAN latency (gateway)", state,
+                           f"avg {g['avg']:.1f}ms, loss {g['loss']:.0f}%"))
+            if g["avg"] > 30:
+                advice.append(("warn", f"LAN latency {g['avg']:.0f}ms > 30ms: check WiFi signal or switch to wired"))
+            if g["loss"] > 0:
+                advice.append(("bad", f"LAN packet loss {g['loss']:.0f}%: unstable WiFi, lower bitrate"))
+    else:
+        checks.append(("LAN latency (gateway)", "warn", "no default gateway"))
+        advice.append(("warn", "cannot detect gateway, skip LAN test"))
+
+    # WAN
+    w = _ping("8.8.8.8", count=3)
+    if "error" in w:
+        checks.append(("WAN latency", "warn", f"ping failed: {w['error']}"))
+    else:
+        state = "ok" if w["avg"] < 30 and w["loss"] == 0 else ("warn" if w["avg"] < 100 else "bad")
+        checks.append(("WAN latency", state, f"avg {w['avg']:.1f}ms, loss {w['loss']:.0f}%"))
+        if w["avg"] > 100:
+            advice.append(("bad", f"WAN latency {w['avg']:.0f}ms > 100ms: remote play will be laggy"))
+
+    # --- 2. porte locali
+    def _port_open(port, host="127.0.0.1"):
+        try:
+            with _sock.create_connection((host, int(port)), timeout=0.5):
+                return True
+        except OSError:
+            return False
+
+    srv_ok = _port_open(cfg.get("port", 8765))
+    checks.append(("Library server", "ok" if srv_ok else "bad",
+                   f"port {cfg.get('port', 8765)} {'listening' if srv_ok else 'closed'}"))
+    if not srv_ok:
+        advice.append(("bad", "Library server not running: SERVICES ▸ START"))
+
+    sun_ok = _port_open(47989)
+    checks.append(("Sunshine", "ok" if sun_ok else "bad",
+                   "port 47989 listening" if sun_ok else "port 47989 closed"))
+    if not sun_ok:
+        advice.append(("bad", "Sunshine not running: SERVICES ▸ START SUNSHINE"))
+
+    # --- 3. prerequisiti
+    checks.append(("Dolphin installed", "ok" if shutil.which(cfg.get("dolphin", "").split()[0]) else "bad",
+                   cfg.get("dolphin", "?")))
+    if not shutil.which(cfg.get("dolphin", "").split()[0]):
+        advice.append(("bad", "Dolphin not found on PATH: install it"))
+
+    installed = prof.installed(cfg)
+    checks.append(("Controller profiles", "ok" if installed else "warn",
+                   "installed" if installed else "not installed"))
+    if not installed:
+        advice.append(("warn", "Controller profiles not installed: SYSTEM ▸ CONTROLLER PROFILES ▸ INSTALL"))
+
+    # --- 4. consigli basati su bitrate corrente vs latenza
+    try:
+        br = int(cfg.get("bitrate", 10000)) if isinstance(cfg.get("bitrate"), (int, str)) else 10000
+    except Exception:
+        br = 10000
+    wan_avg = w.get("avg", 0) if "error" not in w else 0
+    if wan_avg > 50 and br > 8000:
+        advice.append(("warn", f"WAN latency {wan_avg:.0f}ms + bitrate {br//1000}Mbps: try lowering to 6000Mbps"))
+    if wan_avg > 100 and br > 4000:
+        advice.append(("bad", f"WAN latency {wan_avg:.0f}ms > 100ms: switch to 30 fps and 4000Mbps"))
+
+    return checks, advice
+
+
+def connection_test_print(cfg):
+    checks, advice = connection_test(cfg)
+    print("=== Connection test ===")
+    for label, state, detail in checks:
+        tag = "OK" if state == "ok" else ("WARN" if state == "warn" else "FAIL")
+        print(f"[{tag:4}] {label}: {detail}")
+    if advice:
+        print("")
+        print("=== Advice ===")
+        for sev, text in advice:
+            tag = "WARN" if sev == "warn" else ("FAIL" if sev == "bad" else "INFO")
+            print(f"[{tag:4}] {text}")
+    else:
+        print("")
+        print("No issues — settings look fine.")
+    return 0 if not any(s == "bad" for _, s, _ in checks) else 1
 
 
 if __name__ == "__main__":

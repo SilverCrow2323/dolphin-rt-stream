@@ -59,10 +59,125 @@ class FolderList(tk.Frame):
             self.lb.insert("end", i)
 
 
+def _splash_done(app):
+    """Called by Splash when the animation ends: show the main window."""
+    try:
+        app.deiconify()
+        app.lift()
+        app.focus_force()
+    except Exception:
+        pass
+    if getattr(app, "_minimized", False):
+        try:
+            app.after(200, app.iconify)
+        except Exception:
+            pass
+
+
+class Splash(tk.Toplevel):
+    """Brief startup animation: rotating 3D cube + title, ~1.0s, self-dismissing."""
+
+    def __init__(self, parent, duration=1.0, on_done=None):
+        super().__init__(parent)
+        self.parent = parent
+        self.on_done = on_done
+        try:
+            self.overrideredirect(True)
+        except Exception:
+            pass
+        try:
+            self.configure(bg=gcui.BG)
+        except Exception:
+            pass
+        try:
+            self.attributes("-topmost", True)
+        except Exception:
+            pass
+
+        w, h = 440, 280
+        try:
+            sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
+        except Exception:
+            sw, sh = 1280, 720
+        x, y = max(0, (sw - w) // 2), max(0, (sh - h) // 2)
+        try:
+            self.geometry(f"{w}x{h}+{x}+{y}")
+        except Exception:
+            pass
+
+        self.cv = tk.Canvas(self, width=w, height=h, bg=gcui.BG,
+                            highlightthickness=0, bd=0)
+        self.cv.pack(fill="both", expand=True)
+
+        try:
+            bg = gcui.vgrad(w, h, (30, 20, 84), (8, 6, 30))
+            self._bg = gcui.keep(gcui.ImageTk.PhotoImage(bg))
+            self.cv.create_image(0, 0, image=self._bg, anchor="nw")
+        except Exception:
+            pass
+
+        try:
+            self.cv.create_text(w // 2, 58, text="Dolphin Rt:Stream",
+                                fill=gcui.VIOLET, font=("DejaVu Sans Mono", 19, "bold"))
+            self.cv.create_text(w // 2, 86, text="PC Portal",
+                                fill=gcui.CYAN, font=("DejaVu Sans Mono", 11))
+            self.cv.create_text(w // 2, h - 22, text="SPDW Factory Lab",
+                                fill=gcui.DIM, font=("DejaVu Sans Mono", 9))
+        except Exception:
+            pass
+
+        self._duration = max(0.4, float(duration))
+        self._elapsed = 0.0
+        self._angle = 0.0
+        self._cx, self._cy = w // 2, 165
+        self.after(40, self._tick)
+
+    def _tick(self):
+        self._elapsed += 0.04
+        self._angle += 0.10
+        try:
+            self.cv.delete("hero")
+            gcui.Cube3D.draw(self.cv, self._cx, self._cy, 28, self._angle,
+                             0.55, gcui.VIOLET, tag="hero")
+        except Exception:
+            pass
+        if self._elapsed >= self._duration:
+            try:
+                if self.on_done:
+                    self.on_done()
+            except Exception:
+                pass
+            try:
+                self.destroy()
+            except Exception:
+                pass
+            return
+        try:
+            self.after(40, self._tick)
+        except Exception:
+            pass
+
+
 class Portal(tk.Tk):
-    def __init__(self, minimized=False):
+    def __init__(self, minimized=False, no_splash=False):
         super().__init__()
+        self._minimized = bool(minimized)
+        self._splash = None
+        if not no_splash:
+            try:
+                self.withdraw()
+            except Exception:
+                pass
         self.title("Dolphin Rt:Stream // Stream Portal")
+        if not no_splash:
+            try:
+                self._splash = Splash(self, duration=1.0, on_done=lambda: _splash_done(self))
+            except Exception:
+                try:
+                    self.deiconify()
+                except Exception:
+                    pass
+                self._splash = None
         self.geometry("1060x820")
         self.minsize(940, 740)
         self.configure(bg=BG)
@@ -94,9 +209,8 @@ class Portal(tk.Tk):
         self.after(600, self.blink)
         self.after(120, self.animate)
         self.log("portal ready // v" + core.VERSION)
-        if minimized:
+        if no_splash and minimized:
             self.after(400, self.iconify)
-
     # -------------------------------------------------- look & feel
     def _icon(self):
         for p in ("/usr/share/pixmaps/spdw-stream-portal.png", str(gcui.ASSETS / "logo_rtcore.png")):
@@ -141,6 +255,72 @@ class Portal(tk.Tk):
         return tk.Checkbutton(parent, text=text, variable=var, command=cmd, bg=FACE, fg=color, selectcolor=FACE_DK,
                               activebackground=FACE, activeforeground=CYAN, font=self.f, anchor="w",
                               highlightthickness=0, bd=0)
+    # -------------------------------------------------- external shortcuts
+    def _open_path(self, path):
+        try:
+            pp = Path(path).expanduser()
+            if not pp.exists() and pp.suffix == "":
+                pp.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass
+        try:
+            subprocess.Popen(["xdg-open", str(Path(path).expanduser())],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.log(f"open: {path}")
+        except Exception as e:
+            self.log(f"! cannot open {path}: {e}")
+
+    def _open_dolphin(self):
+        cmd = self.e_dolphin.get().strip() or self.cfg.get("dolphin", "dolphin-emu")
+        try:
+            subprocess.Popen(cmd.split(), start_new_session=True,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.log(f"dolphin launched: {cmd}")
+        except Exception as e:
+            self.log(f"! cannot launch dolphin: {e}")
+
+    def _open_dolphin_cfg(self):
+        d = core.dolphin_cfg_dir(self.cfg)
+        self._open_path(d)
+
+    def _open_dolphin_gfx(self):
+        d = core.dolphin_cfg_dir(self.cfg)
+        gf = Path(d) / "GFX.ini"
+        if gf.exists():
+            self._open_path(gf)
+        else:
+            self.log(f"! GFX.ini not found at {gf}")
+
+    def _open_apps_json(self):
+        ap = Path(self.cfg.get("sunshine_apps", "~/.config/sunshine/apps.json")).expanduser()
+        if ap.exists():
+            self._open_path(ap)
+        else:
+            self.log(f"! apps.json not found at {ap} (run APPLY TO SUNSHINE APPS first)")
+
+    def _open_portal_cfg(self):
+        self._open_path(core.CONF_FILE)
+
+    def _run_connection_test(self):
+        self.show("LOG")
+        self.log("=== CONNECTION TEST ===")
+
+        def work():
+            try:
+                checks, advice = core.connection_test(self.cfg, self.log)
+                for label, state, detail in checks:
+                    tag = "OK" if state == "ok" else ("WARN" if state == "warn" else "ERR")
+                    self.log(f"  [{tag}] {label}: {detail}")
+                if advice:
+                    self.log("=== ADVICE ===")
+                    for sev, text in advice:
+                        self.log(f"  [{sev.upper()}] {text}")
+                else:
+                    self.log("  No issues detected.")
+            except Exception as e:
+                self.log(f"! connection test failed: {e}")
+        self.run_bg("CONNECTION TEST", work)
+
 
     def _tabs(self):
         self.tabbar = gcui.TabBar(self, ["LIBRARY", "SERVICES", "SYSTEM", "LOG"], self.show, self.ft, TAB_ACC)
@@ -166,8 +346,27 @@ class Portal(tk.Tk):
             self.refresh_system()
 
     def _statusbar(self):
+        """Status bar inferiore con LED SUNSHINE + LIBRARY sempre visibili."""
         wrap = tk.Frame(self, bg=BG)
         wrap.pack(fill="x", side="bottom")
+
+        # Striscia LED (sopra la status bar)
+        led_wrap = tk.Frame(wrap, bg=gcui.mix(FACE, BG, 0.55), height=26)
+        led_wrap.pack(fill="x")
+        led_wrap.pack_propagate(False)
+
+        self._led_sun_lamp = gcui.Lamp(led_wrap, bg=gcui.mix(FACE, BG, 0.55))
+        self._led_sun_lamp.pack(side="left", padx=(12, 4), pady=3)
+        self._led_sun_lbl = tk.Label(led_wrap, text="SUNSHINE ...", bg=gcui.mix(FACE, BG, 0.55),
+                                     fg=DIM, font=self.fs, anchor="w")
+        self._led_sun_lbl.pack(side="left", padx=(0, 20))
+
+        self._led_lib_lamp = gcui.Lamp(led_wrap, bg=gcui.mix(FACE, BG, 0.55))
+        self._led_lib_lamp.pack(side="left", padx=(0, 4), pady=3)
+        self._led_lib_lbl = tk.Label(led_wrap, text="LIBRARY ...", bg=gcui.mix(FACE, BG, 0.55),
+                                     fg=DIM, font=self.fs, anchor="w")
+        self._led_lib_lbl.pack(side="left", padx=(0, 20))
+
         tk.Frame(wrap, bg=gcui.mix(VIOLET, BG, 0.4), height=2).pack(fill="x")
         self.sb = tk.Label(wrap, text="", bg=gcui.mix(FACE, BG, 0.5), fg=CYAN, font=self.fs, anchor="w", padx=12, pady=4)
         self.sb.pack(fill="x")
@@ -318,6 +517,108 @@ class Portal(tk.Tk):
         tk.Label(ai, text="Autostart uses XDG entries in ~/.config/autostart, so it works whatever init MX is running (SysVinit or systemd).",
                  bg=FACE, fg=DIM, font=self.fs, justify="left", wraplength=900).pack(anchor="w", pady=(8, 0))
 
+        # ==== QUICK TOOLS ====
+        qp, qi = self.panel(fr, "QUICK TOOLS", RT)
+        qp.pack(fill="x", pady=14)
+
+        self.splash_var = tk.BooleanVar(value=bool(self.cfg.get("show_splash", True)))
+        self.check(qi, "Boot splash animation (this portal)", self.splash_var,
+                   self._save_splash_setting).pack(fill="x")
+
+        row1 = tk.Frame(qi, bg=FACE)
+        row1.pack(fill="x", pady=(8, 4))
+        self.button(row1, "⟳ REBUILD LIBRARY", lambda: self.do_build(False, show_log=True), VIOLET).pack(side="left", padx=(0, 8))
+        self.button(row1, "↻ REFRESH COVERS",  lambda: self.do_build(True, show_log=True), RT).pack(side="left", padx=(0, 8))
+        self.button(row1, "🗑 CLEANUP COVERS", self._cleanup_covers, WARN).pack(side="left")
+
+        row2 = tk.Frame(qi, bg=FACE)
+        row2.pack(fill="x", pady=(0, 4))
+        self.button(row2, "💾 EXPORT CONFIG", self._export_config, "#9a94c8").pack(side="left", padx=(0, 8))
+        self.button(row2, "📂 IMPORT CONFIG", self._import_config, "#9a94c8").pack(side="left", padx=(0, 8))
+        self.button(row2, "📄 OPEN CONFIG.JSON", self._open_portal_cfg, CYAN).pack(side="left")
+
+        row3 = tk.Frame(qi, bg=FACE)
+        row3.pack(fill="x", pady=(0, 4))
+        self.button(row3, "📁 OPEN LIBRARY", self.open_lib, VIOLET).pack(side="left", padx=(0, 8))
+        self.button(row3, "🖼 OPEN COVERS", self._open_covers_folder, VIOLET).pack(side="left", padx=(0, 8))
+        self.button(row3, "📝 OPEN LAST STREAM LOG", self._open_stream_log, GOLD).pack(side="left")
+
+        tk.Label(qi, text="Handheld boot animation is controlled from the handheld: START ▸ Interface ▸ Boot animation.",
+                 bg=FACE, fg=DIM, font=self.fs, justify="left", wraplength=920, anchor="w").pack(fill="x", pady=(8, 0))
+
+    def _save_splash_setting(self):
+        self.cfg["show_splash"] = bool(self.splash_var.get())
+        core.save_config(self.cfg)
+        self.log(f"splash: {'on' if self.splash_var.get() else 'off'} (applies next launch)")
+
+    def _cleanup_covers(self):
+        try:
+            out = core.lib_dir(self.cfg)
+            covers_dir = out / "covers"
+            if not covers_dir.exists():
+                self.log("! covers folder not found")
+                return
+            keep = set()
+            for g in core.load_library(self.cfg):
+                if g.get("cover"):
+                    keep.add(Path(g["cover"]).name)
+            removed = freed = 0
+            for f in covers_dir.glob("*.png"):
+                if f.name not in keep:
+                    freed += f.stat().st_size
+                    f.unlink()
+                    removed += 1
+            self.log(f"cleanup: removed {removed} orphan cover(s), freed {freed // 1024} KB")
+        except Exception as e:
+            self.log(f"! cleanup failed: {e}")
+
+    def _export_config(self):
+        from tkinter import filedialog
+        dst = filedialog.asksaveasfilename(
+            title="Export config.json", defaultextension=".json",
+            initialfile="spdw-stream-config.json",
+            filetypes=[("JSON", "*.json"), ("All files", "*.*")])
+        if not dst:
+            return
+        try:
+            import shutil
+            shutil.copyfile(core.CONF_FILE, dst)
+            self.log(f"exported: {core.CONF_FILE} -> {dst}")
+        except Exception as e:
+            self.log(f"! export failed: {e}")
+
+    def _import_config(self):
+        from tkinter import filedialog, messagebox
+        src = filedialog.askopenfilename(
+            title="Import config.json",
+            filetypes=[("JSON", "*.json"), ("All files", "*.*")])
+        if not src:
+            return
+        if not messagebox.askyesno("Import", "Overwrite current config.json?\nPortal restart required."):
+            return
+        try:
+            import json as _json
+            data = _json.loads(Path(src).read_text(encoding="utf-8"))
+            merged = core.load_config()
+            merged.update(data)
+            core.save_config(merged)
+            self.cfg = merged
+            self.log(f"imported: {src} -> {core.CONF_FILE}")
+            self.log("! restart the portal to apply all settings")
+        except Exception as e:
+            self.log(f"! import failed: {e}")
+
+    def _open_covers_folder(self):
+        d = core.lib_dir(self.cfg) / "covers"
+        self._open_path(d)
+
+    def _open_stream_log(self):
+        p = Path(self.cfg.get("library", "~/.local/share/spdw-stream/library")).expanduser().parent / "last_stream.log"
+        if p.exists():
+            self._open_path(p)
+        else:
+            self.log(f"! stream log not found at {p} (play a game first)")
+
     def toggle_autostart(self, key):
         on = self.vars[key].get()
         core.autostart_set(key, on)
@@ -350,7 +651,10 @@ class Portal(tk.Tk):
         cp.pack(side="left", fill="both", expand=True, padx=(0, 12))
         self.check_box = tk.Frame(ci, bg=FACE)
         self.check_box.pack(fill="x")
-        self.button(ci, "↻ RE-CHECK", self.refresh_system, CYAN).pack(anchor="w", pady=(8, 0))
+        btn_row = tk.Frame(ci, bg=FACE)
+        btn_row.pack(anchor="w", pady=(8, 0))
+        self.button(btn_row, "↻ RE-CHECK", self.refresh_system, CYAN).pack(side="left", padx=(0, 8))
+        self.button(btn_row, "⚡ RUN CONNECTION TEST", self._run_connection_test, RT).pack(side="left")
 
         hp, hi = self.panel(row, "HANDHELD SETTINGS  (conf/stream.conf)", RT)
         hp.pack(side="left", fill="both", expand=True)
@@ -424,6 +728,24 @@ class Portal(tk.Tk):
         self.button(tr, "COPY", self.copy_token, CYAN).pack(side="left", padx=(10, 6))
         self.button(tr, "NEW TOKEN", self.new_token, BAD).pack(side="left")
         tk.Label(tr, text="type it on the handheld: START > Streaming > Edit token", bg=FACE, fg=DIM, font=self.fs).pack(side="left", padx=12)
+
+        # ==== DOLPHIN shortcuts ====
+        dp, di = self.panel(fr, "DOLPHIN & SUNSHINE — QUICK ACCESS", CYAN)
+        dp.pack(fill="x", pady=(14, 0))
+        row1 = tk.Frame(di, bg=FACE)
+        row1.pack(fill="x", pady=(0, 6))
+        self.button(row1, "OPEN DOLPHIN", self._open_dolphin, CYAN).pack(side="left", padx=(0, 8))
+        self.button(row1, "DOLPHIN CONFIG FOLDER", self._open_dolphin_cfg, VIOLET).pack(side="left", padx=(0, 8))
+        self.button(row1, "GRAPHICS SETTINGS", self._open_dolphin_gfx, RT).pack(side="left")
+
+        row2 = tk.Frame(di, bg=FACE)
+        row2.pack(fill="x", pady=(0, 6))
+        self.button(row2, "SUNSHINE APPS.JSON", self._open_apps_json, "#9a94c8").pack(side="left", padx=(0, 8))
+        self.button(row2, "SUNSHINE WEB UI", lambda: webbrowser.open("https://localhost:47990"), CYAN).pack(side="left", padx=(0, 8))
+        self.button(row2, "PORTAL CONFIG.JSON", self._open_portal_cfg, GOLD).pack(side="left")
+
+        tk.Label(di, text="Opens the native tools. Use these when you need to tune Dolphin beyond what the profile manager covers.",
+                 bg=FACE, fg=DIM, font=self.fs, justify="left", wraplength=920, anchor="w").pack(fill="x", pady=(4, 0))
 
         cf, cfi = self.panel(fr, "CONFIG", GOLD)
         cf.pack(fill="x", pady=14)
@@ -669,6 +991,24 @@ class Portal(tk.Tk):
         srv = core.server_running()
         self.srv_lbl.config(text=f"SERVING :{self.cfg['port']}" if srv else "STOPPED", fg=RT if srv else WARN)
         self.srv_lamp.set(RT if srv else WARN, srv)
+
+        # LED striscia in alto (sempre visibili)
+        try:
+            if not inst:
+                self._led_sun_lamp.set(BAD, False)
+                self._led_sun_lbl.config(text="SUNSHINE: NOT INSTALLED", fg=BAD)
+            else:
+                self._led_sun_lamp.set(OK if run else WARN, run)
+                self._led_sun_lbl.config(
+                    text=f"SUNSHINE: {'RUNNING' if run else 'STOPPED'}",
+                    fg=OK if run else WARN)
+
+            self._led_lib_lamp.set(RT if srv else WARN, srv)
+            self._led_lib_lbl.config(
+                text=f"LIBRARY: SERVING :{self.cfg['port']}" if srv else "LIBRARY: STOPPED",
+                fg=RT if srv else WARN)
+        except AttributeError:
+            pass  # header LEDs not yet created (first call before _statusbar)
         self._sb_parts = (("SUNSHINE " + ("ON" if run else "OFF")), (f"SYNC :{self.cfg['port']} " + ("ON" if srv else "OFF")),
                           self.counts)
         self.after(2000, self.refresh_status)
@@ -691,7 +1031,15 @@ class Portal(tk.Tk):
 
 def main():
     minimized = "--minimized" in sys.argv
-    Portal(minimized=minimized).mainloop()
+    no_splash = "--no-splash" in sys.argv
+    if not no_splash:
+        try:
+            _cfg = core.load_config()
+            if not _cfg.get("show_splash", True):
+                no_splash = True
+        except Exception:
+            pass
+    Portal(minimized=minimized, no_splash=no_splash).mainloop()
 
 
 if __name__ == "__main__":
