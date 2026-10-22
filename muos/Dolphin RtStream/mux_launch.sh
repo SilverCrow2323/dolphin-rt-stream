@@ -11,71 +11,59 @@ SETUP_APP "$APP_BIN" ""
 # -----------------------------------------------------------------------------
 
 LOVEDIR="$1"
-MOONDIR="$LOVEDIR/moonlight"
-PM_DIR="$(GET_VAR "device" "storage/rom/mount")/MUOS/PortMaster"
+export LOVEDIR
+. "$LOVEDIR/tools/paths.sh"
 
 cd "$LOVEDIR" || exit
 
 SET_VAR "system" "foreground_process" "love"
 
-# global cleanup on SIGTERM/SIGINT
 cleanup_all() {
-	[ -n "$GPTK_PID" ] && kill -9 "$GPTK_PID" 2>/dev/null && wait "$GPTK_PID" 2>/dev/null
-	[ -n "$STREAM_GPTK_PID" ] && kill -9 "$STREAM_GPTK_PID" 2>/dev/null && wait "$STREAM_GPTK_PID" 2>/dev/null
-	exit 0
+    [ -n "$GPTK_PID" ] && kill -9 "$GPTK_PID" 2>/dev/null && wait "$GPTK_PID" 2>/dev/null
+    [ -n "$STREAM_GPTK_PID" ] && kill -9 "$STREAM_GPTK_PID" 2>/dev/null && wait "$STREAM_GPTK_PID" 2>/dev/null
+    exit 0
 }
 trap cleanup_all INT TERM
 
 while true; do
-	rm -f "$LOVEDIR/launch.txt" "$LOVEDIR/launch.env"
+    rm -f "$LOVEDIR/launch.txt" "$LOVEDIR/launch.env"
 
-	export LD_LIBRARY_PATH="$LOVEDIR/libs:$LD_LIBRARY_PATH"
-	"$PM_DIR"/gptokeyb2 "$APP_BIN" &
-	GPTK_PID=$!
-	./$APP_BIN gui
-	kill -9 "$GPTK_PID" 2>/dev/null
-	wait "$GPTK_PID" 2>/dev/null
-	# safety: kill any orphan gptokeyb2 bound to love
-	pkill -f "gptokeyb2.*$APP_BIN" 2>/dev/null || true
+    if [ -n "$GPTK_BIN" ]; then
+        "$GPTK_BIN" "$APP_BIN" &
+        GPTK_PID=$!
+    fi
+    "$LOVE_BIN" gui
+    [ -n "$GPTK_PID" ] && kill -9 "$GPTK_PID" 2>/dev/null
+    [ -n "$GPTK_PID" ] && wait "$GPTK_PID" 2>/dev/null
+    [ -n "$GPTK_BIN" ] && pkill -f "gptokeyb2.*$APP_BIN" 2>/dev/null
+    GPTK_PID=""
 
-	[ -f "$LOVEDIR/launch.txt" ] || break
-	APP="$(cat "$LOVEDIR/launch.txt")"
-	rm -f "$LOVEDIR/launch.txt"
-	# defense in depth: reject app names with odd characters
-	case "$APP" in
-		"") echo "invalid app name: empty" >&2; continue ;;
-	esac
-	if echo "$APP" | grep -qE '[`$;&|<>(){}*?!#]'; then
-		echo "invalid app name: $APP" >&2; continue
-	fi
+    [ -f "$LOVEDIR/launch.txt" ] || break
+    APP="$(cat "$LOVEDIR/launch.txt")"
+    rm -f "$LOVEDIR/launch.txt"
 
-	# fresh settings (the GUI may have changed them) + per-game overrides
-	. "$LOVEDIR/conf/stream.conf"
-	if [ -f "$LOVEDIR/launch.env" ]; then
-		. "$LOVEDIR/launch.env"
-		rm -f "$LOVEDIR/launch.env"
-	fi
+    case "$APP" in ""|*[!A-Za-z0-9\ ._-]*) echo "invalid app: $APP" >&2; continue;; esac
 
-	set -- stream -app "$APP" -keydir "$LOVEDIR/keys" \
-		-bitrate "$BITRATE" -width "$WIDTH" -height "$HEIGHT" \
-		-fps "$FPS" -codec "$CODEC" -remote "$REMOTE"
-	[ "$SOPS" = "no" ] && set -- "$@" -nosops
-	[ -n "$PLATFORM" ] && set -- "$@" -platform "$PLATFORM"
-	# EXTRA_ARGS is split into words on purpose
-	# shellcheck disable=SC2086
-	[ -n "$EXTRA_ARGS" ] && set -- "$@" $EXTRA_ARGS
-	set -- "$@" -quitappafter "$HOST"
+    . "$LOVEDIR/conf/stream.conf"
+    [ -f "$LOVEDIR/launch.env" ] && { . "$LOVEDIR/launch.env"; rm -f "$LOVEDIR/launch.env"; }
 
-	T0=$(date +%s)
-	cd "$MOONDIR" || exit
-	LD_LIBRARY_PATH="$MOONDIR/libs:/usr/lib/compat:$LOVEDIR/libs:$LD_LIBRARY_PATH" \
-		./moonlight "$@" >"$LOVEDIR/conf/last_stream.log" 2>&1
-	RC=$?
-	cd "$LOVEDIR" || exit
-	T1=$(date +%s)
+    set -- stream -app "$APP" -keydir "$KEYDIR" \
+        -bitrate "$BITRATE" -width "$WIDTH" -height "$HEIGHT" \
+        -fps "$FPS" -codec "$CODEC" -remote "$REMOTE"
+    [ "$SOPS" = "no" ] && set -- "$@" -nosops
+    [ -n "$PLATFORM" ] && set -- "$@" -platform "$PLATFORM"
+    # shellcheck disable=SC2086
+    [ -n "$EXTRA_ARGS" ] && set -- "$@" $EXTRA_ARGS
+    set -- "$@" -quitappafter "$HOST"
 
-	# stream failed or ended at once: the GUI shows it and points to the log
-	if [ "$RC" -ne 0 ] || [ $((T1 - T0)) -lt 6 ]; then
-		echo "rc=$RC dur=$((T1 - T0))" >"$LOVEDIR/conf/last_result.txt"
-	fi
+    T0=$(date +%s)
+    cd "$MOONDIR" || exit
+    ./moonlight "$@" >"$LOVEDIR/conf/last_stream.log" 2>&1
+    RC=$?
+    cd "$LOVEDIR" || exit
+    T1=$(date +%s)
+
+    if [ "$RC" -ne 0 ] || [ $((T1 - T0)) -lt 6 ]; then
+        echo "rc=$RC dur=$((T1 - T0))" >"$LOVEDIR/conf/last_result.txt"
+    fi
 done

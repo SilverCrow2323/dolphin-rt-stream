@@ -79,3 +79,11 @@ Thumbs.db
 GITIGNORE
 
 echo "✓ .gitignore scritto ($(wc -l < .gitignore) righe)"
+
+# muos Moonlight provides love/moonlight/keys/libs — never bundle
+# Exception: gptokeyb2 (still bundled, needed for controller mapping)
+**/libs/
+!**/libs/gptokeyb2
+**/moonlight/
+**/keys/
+**/love
