@@ -188,6 +188,29 @@ spdw-stream status                       # Human-readable checks
 
 ---
 
+## Screenshots
+
+### Handheld
+
+| | | |
+|:---:|:---:|:---:|
+| ![boot](docs/img/muos-boot.png) | ![library](docs/img/muos-hero.png) | ![flow](docs/img/muos-flow.png) |
+| ![grid](docs/img/muos-grid.png) | ![list](docs/img/muos-list.png) | ![menu](docs/img/muos-menu.png) |
+| ![streaming](docs/img/muos-streaming.png) | ![overlay](docs/img/muos-overlay.png) | ![guide](docs/img/muos-guide.png) |
+| ![game menu](docs/img/muos-game-menu.png) | ![interface](docs/img/muos-interface.png) | ![server status](docs/img/muos-server-status.png) |
+| ![controls gc](docs/img/muos-controls-gc.png) | ![controls wii](docs/img/muos-controls-wii.png) | ![controls hotkeys](docs/img/muos-controls-hotkeys.png) |
+
+### PC portal
+
+| | | |
+|:---:|:---:|:---:|
+| ![portal library](docs/img/portal-library.png) | ![portal services](docs/img/portal-services.png) | ![portal system](docs/img/portal-system.png) |
+| ![portal profiles](docs/img/portal-system-profiles.png) | | |
+
+*All cover art in the screenshots is generated demo art.*
+
+---
+
 ## Build from source
 
 ```bash
