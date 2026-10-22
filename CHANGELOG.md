@@ -78,3 +78,22 @@
 
 ## 1.0
 - First release: library sync, Sunshine apps, autostart.
+## 4.0.0 — PC portal hardening
+
+### New commands
+- `spdw-stream preflight` — run all checks, exit 1 on critical failure
+- `spdw-stream cleanup covers` — remove orphan cover PNGs
+- `spdw-stream config export|import` — backup/restore `config.json`
+
+### Bug fixes
+- `shrink()`: log failures instead of swallowing them silently
+- `server_start()`: precheck port availability, wait up to 3s for bind
+- `install_dolphin_profiles()`: refuse to apply if Dolphin is running
+- `system_checks()`: fix residual Italian string
+
+### Declared for 4.1
+- Deduplicate `standalone/spdw_stream_sync.py` vs `portal/spdw_stream_core.py`
+- Post-stream watchdog (restore 4:3 / panel after crash)
+- Persistent log with rotation
+- Treeview search bar
+- Auto-update check for Sunshine / Dolphin
