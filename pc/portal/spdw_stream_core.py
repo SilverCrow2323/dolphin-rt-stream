@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import profiles as prof
 
-VERSION = "4.0.0"
+VERSION = "4.1.0"
 HOME = Path.home()
 CONF_DIR = Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config")) / "spdw-stream"
 CONF_FILE = CONF_DIR / "config.json"

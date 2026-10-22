@@ -1,189 +1,244 @@
+<div align="center">
+
 # Dolphin Rt:Stream
 
-**Stream GameCube and Wii games from your PC to a muOS handheld — with a GameCube-style 2.5D interface on both ends.**
+**Stream GameCube & Wii games from your PC to a muOS handheld.**
 
-Dolphin Rt:Stream keeps your ROMs and Dolphin on the PC, and turns your handheld (tested on the Anbernic RG35XX H) into a
-console-like front end: a cover-flow library, a boot animation, and a streaming session through
-[Sunshine](https://github.com/LizardByte/Sunshine) / [Moonlight](https://github.com/moonlight-stream/moonlight-embedded).
-You can see **and edit the Dolphin controller mapping from the handheld itself**.
+Sunshine + Moonlight, wrapped in a GameCube-style 2.5D frontend, with editable controller profiles and one-tap library sync.
 
-![Dolphin Rt:Stream on the handheld: library, controller mapping, menus](docs/img/muos-hero.png)
+[![Version](https://img.shields.io/badge/version-4.1.0-8C59F2?style=for-the-badge&logo=github)](https://github.com/SilverCrow2323/dolphin-rt-stream/releases/latest)
+[![Platform](https://img.shields.io/badge/platform-muOS-4FA8C7?style=for-the-badge&logo=linux)](https://muos.dev)
+[![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
 
-## Highlights
+</div>
 
-**On the handheld (muOS app "Dolphin Stream")**
-- Cover Flow / Grid / List library with GameCube, Wii and Favorites tabs (Recent games merged into Favorites), play
-  counters, per-game stream profiles, live search
-- GameCube-style boot animation (120-frame sprite sheet + "Mock Rt:Core" logo with electric flicker), animated menus,
-  big touch-free UI made for a 3.5" screen
-- **SERVER STATUS panel** with SUNSHINE and LIBRARY LEDs (green = reachable, red = down, gray = unknown), refreshed every
-  15 s in the background
-- **Pre-flight host check**: pressing A on a game pings the PC first. If the PC is off, you get a clear error instead of
-  5 seconds of "CONNECTING TO STREAM"
-- **Guide panel (M)**: on any menu item, press **M** to open a help panel with a short intro and, for options with
-  selectable values, per-value descriptions with a ✓ recommended marker and a ▲ warning marker
-- **Controls screen**: the virtual Xbox pad drawn on screen, the selected mapping lit up, left/right to change a binding,
-  Y to switch profile — changes are validated and written to the PC
-- **Menu structure**: quick actions (Search, Sync) on top, then STREAMING, CONTROLLER PROFILES, INTERFACE, TOOLS.
-  Advanced options live in overlay panels with an intro and inline descriptions
-- Colored icons per category across menus, submenus and overlays; uppercase section titles
-- **Tools**: connection test, Sunshine pairing (PIN on screen), last-stream log, diagnostics export, verify Sunshine
-  apps, disk space, measure latency, controller profiles, reset (statistics / favorites / streaming / cover cache), about
-- 5 themes, on-screen keyboard, English UI, everything reachable with the handheld's own buttons
+---
 
-**On the PC (Dolphin Rt:Stream Portal, `.deb`)**
-- Scans your ROM folders **at every start** (and on demand), downloads cover art, registers one Sunshine app per game
-- Launches Dolphin **fullscreen, no main window, no desktop**; hides the XFCE panel while streaming
-- Switches the PC to a **4:3 display mode during the stream** so a 4:3 game fills the handheld screen (no black bars),
-  and restores it afterwards
-- Controller **profile manager**: GCPad / Wiimote / Hotkeys families, written into Dolphin before every launch
-- Library server for the handheld, autostart helpers (Sunshine, server, portal), optional LightDM autologin
+> **TL;DR** — Dolphin runs on your PC. The handheld is the TV. Moonlight is the wire. This repo is the frontend that makes it feel like a real console. Part of the **[Dolphin Rt:Core for muOS](https://github.com/SilverCrow2323/Dolphin-Rt-Core)** ecosystem.
 
-## How it works
+![Dolphin Rt:Stream library](docs/img/muos-hero.png)
 
+<details open>
+<summary><b>What's new in 4.1.0</b></summary>
+
+**Handheld**
+- Uses muOS Moonlight (`/opt/muos/share/application/Moonlight/`) for `love`, `libs/`, `moonlight/`, `keys/` — fallback to bundled copies if not installed
+- `gptokeyb2` stays bundled (it is not part of muOS Moonlight)
+- New `tools/paths.sh` — one file to update if muOS changes paths
+
+**PC portal**
+- `spdw-stream preflight` — 8 checks, exit 1 on critical failure
+- `spdw-stream cleanup covers` — remove orphan cover PNGs
+- `spdw-stream config export|import` — backup/restore `config.json`
+- `server_start()` prechecks the port and waits for bind
+- `install_dolphin_profiles()` refuses if Dolphin is running
+- Fix residual Italian string in system checks
+
+**Carried from 3.5.0**
+- SERVER STATUS panel (SUNSHINE + LIBRARY LEDs, 15 s refresh)
+- Pre-flight ping: pressing **A** on a game checks the PC first
+- Guide panel (**M** on any item, with ✓ recommended / ▲ warning)
+- Search across the current tab
+- gameMenu hero: cover 2.5D + PLAY + FAV / INFO
+- Colored icons, uppercase section titles, tab icons in Controls
+
+</details>
+
+---
+
+## What it is / What it's not
+
+**It is** — a handheld app (LÖVE, 2.5D GameCube UI) that streams from Sunshine, plus a PC portal (Python/Tk) that scans your ROMs, registers them in Sunshine, serves the library over HTTP, and lets you edit Dolphin's controller mapping from the handheld itself.
+
+**It's not** — an emulator. The handheld never decodes a GameCube frame. The PC does all the rendering; Moonlight streams the video + virtual Xbox pad.
+
+```text
+PC (Linux, X11)                      Handheld (muOS)
+────────────────────                 ─────────────────────
+Dolphin ──render──▶ Sunshine ──▶ Moonlight ──▶ screen
+Sunshine :47989 ──H.264/H.265─▶ Moonlight ──▶ pad
+Library :8765   ──library.tsv─▶ Dolphin Rt:Stream
+Profiles ◀──── /ctl ──── edit mapping
 ```
- ┌──────────── PC (Linux, X11) ────────────┐                    ┌──────── Handheld (muOS) ────────┐
- │  Dolphin Rt:Stream portal  ── scans ROMs      │   HTTP :8765       │  Dolphin Stream (LÖVE app)      │
- │  Library server  ─────── library.tsv ───┼───────────────────▶│  cover flow, menus, Controls    │
- │                   ─────── profiles.tsv ─┼───────────────────▶│                                 │
- │                   ◀────── /ctl (token) ─┼────────────────────│  edit a binding                 │
- │  Sunshine ── one app per game           │   Moonlight        │  Moonlight (moonlight-embedded) │
- │   └ prep: profiles → panel → 4:3 mode   │◀═══ video/audio ═══│  pad ──▶ virtual Xbox pad       │
- │   └ Dolphin -b -e game -C Fullscreen    │════ controller ═══▶│                                 │
- └─────────────────────────────────────────┘                    └─────────────────────────────────┘
-```
 
-More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · wire formats and security: [docs/PROTOCOL.md](docs/PROTOCOL.md).
+---
+
+## What's inside
+
+### Handheld (`muos/Dolphin RtStream/`)
+
+| Feature | Notes |
+|---|---|
+| **Cover Flow / Grid / List library** | GameCube, Wii, Favorites tabs (Recent merged into Favorites) |
+| **Boot animation** | 120-frame sprite sheet, "Dolphin Rt:Core" logo with electric flicker |
+| **SERVER STATUS panel** | SUNSHINE + LIBRARY LEDs, refreshed every 15s |
+| **Pre-flight ping** | `A` on a game → checks PC first, clear error if off |
+| **Guide panel (M)** | Short intro + per-value descriptions, ✓ recommended, ▲ warning |
+| **Controls screen** | Virtual pad drawn on screen, edit bindings with `◀`/`▶`, `Y` to switch profile |
+| **Search** | Filter current tab by title or app name |
+| **5 themes · touch-free** | `START` ▸ Interface |
+
+### PC (`pc/`)
+
+| Feature | Notes |
+|---|---|
+| **ROM scan on every start** | Keeps `library.tsv` + Sunshine `apps.json` fresh |
+| **Cover art auto-download** | GameTDB, or `<rom>.png` next to the ROM |
+| **Dolphin fullscreen** | No main window, no desktop visible, panel hidden |
+| **4:3 during stream** | `xrandr`, restored automatically (X11 only) |
+| **Controller profile manager** | GCPad / Wiimote / Hotkeys families, applied before each launch |
+| **Library server** | `:8765` + `/profiles.tsv` + `/ctl` (token-protected) |
+| **Autostart** | Sunshine, server, portal, optional LightDM autologin |
+
+---
 
 ## Quick start
 
 ### Requirements
-| | |
+
+| Environment | Requirements |
 |---|---|
-| PC | Linux with **X11** (XFCE / MX Linux tested), Python ≥ 3.9 with Tk, [Dolphin](https://dolphin-emu.org), [Sunshine](https://github.com/LizardByte/Sunshine) |
-| Handheld | muOS with the LÖVE runtime and a `moonlight-embedded` build (the usual "Moonlight" port) |
-| Network | LAN, or Tailscale/WireGuard between the two |
+| **PC** | Linux **X11** (XFCE / MX Linux tested), Python ≥ 3.9 + Tk, [Dolphin](https://dolphin-emu.org), [Sunshine](https://github.com/LizardByte/Sunshine) |
+| **Handheld** | muOS with LÖVE + Moonlight, or the `.muxapp` full bundle |
+| **Network** | LAN, or Tailscale / WireGuard |
 
 ### 1. PC
+
 ```bash
-sudo apt install ./spdw-stream-portal_<version>_all.deb       # pulls python3-tk, python3-pil, ...
-spdw-stream-portal                                            # or start it from the menu: "Dolphin Rt:Stream Portal"
+sudo apt install ./spdw-stream-portal_4.1.0_all.deb
+spdw-stream-portal
 ```
-1. **LIBRARY**: add your GameCube / Wii ROM folders — the portal scans them right away (and at every start).
-2. **SERVICES**: install/start Sunshine, start the library server. Tick the autostart boxes you want.
-3. **SYSTEM**: the checklist should be green. Install the controller profiles, note the **edit token**.
-4. Restart Sunshine once so it sees the new apps.
+
+1. **LIBRARY** — Add GameCube / Wii ROM folders (scanned at every start).
+2. **SERVICES** — Install/start Sunshine, start the library server.
+3. **SYSTEM** — Checklist should be green; install controller profiles; copy the edit token.
+4. Restart Sunshine once.
 
 ### 2. Handheld
-1. Copy `DolphinStream/` to `ROMS/APPLICATIONS` (keep your own `love`, `libs/`, `moonlight/`, `keys/` next to it — they
-   are not part of this repo).
-2. Start it. **START ▸ Streaming**: set *PC host* (IP of the PC) and *Edit token* (from the portal).
-3. **START ▸ Tools ▸ Pair with Sunshine**: type the PIN shown on screen into Sunshine's web UI (PIN tab).
-4. **SELECT** to sync the library, **A** to play.
 
-Leave a stream with the Moonlight combo **START + SELECT + L1 + R1**, or the Dolphin hotkey **MODE + START**.
+1. Copy either `DolphinStream-muOS-4.1.0.zip` or `Dolphin_RtStream-4.1.0.muxapp` to the SD card.
+2. Install via muOS → Applications, or unzip to `ROMS/APPLICATIONS/` → get `Dolphin RtStream/`.
+3. `START` ▸ Streaming — Set PC host + Edit token.
+4. `START` ▸ Tools ▸ Pair with Sunshine — Type the PIN into Sunshine's web UI.
+5. `SELECT` to sync, `A` to play.
 
-## Controls on the handheld
+*Leave a stream with `START` + `SELECT` + `L1` + `R1`, or the Dolphin hotkey `MODE` + `START`.*
 
-| Button | Library | Menus | Overlays / Guides |
-|---|---|---|---|
-| D-pad ◀ ▶ | previous / next cover | change value / swap quick action | – |
-| D-pad ▲ ▼ | jump 4 covers (Flow) / row | move | move / scroll |
-| L1 / R1 | switch tab | previous / next section | – |
-| A | play | confirm / open | select |
-| X | favorite (or edit search) | – | – |
-| Y | game menu (per-game profile) | switch profile (Controls) | – |
-| **M** | – | **open guide** | **open guide** |
-| SELECT | sync with the PC | – | toggle keyboard view (Controls) |
-| START | main menu | close all | close |
-| B | exit | back | back / close |
+---
 
-## Controller profiles in 30 seconds
+## Which package?
 
-Dolphin sees the handheld as a **Sunshine virtual Xbox pad**. The default `muos` profiles are in
-[`pc/profiles`](pc/profiles); the full reference is in [docs/CONTROLS.md](docs/CONTROLS.md).
-
-| Kind | Profiles | Notes |
+| Package | Size | Target |
 |---|---|---|
-| GCPad | `muos`, `muos-xbox` | `muos` = layout tested on the RG35XX H; `muos-xbox` = standard Xbox positions |
-| Wiimote | `muos`, `muos-nunchuk` | sideways remote for 2D games; remote + nunchuk with IR on the right stick |
-| Hotkeys | `muos`, `muos-minimal` | everything on a **MODE layer** (hold MODE): Exit, Pause, save/load state, volume, speed |
+| `spdw-stream-portal_4.1.0_all.deb` | ~398 KB | PC only |
+| `DolphinStream-muOS-4.1.0.zip` | ~1.5 MB | Handheld with muOS Moonlight installed |
+| `Dolphin_RtStream-4.1.0.muxapp` | ~3.5 MB | Handheld without Moonlight (full bundle) |
 
-Hotkeys (`muos`): `MODE+START` exit · `MODE+SELECT` pause · `MODE+TL/TR` save/load slot 1 · `MODE+D-pad ▲▼` volume ·
-`MODE+D-pad ◀▶` emulation speed · `MODE+Y` screenshot. *Toggle Fullscreen* is deliberately unmapped: it would bring the
-desktop back into the stream.
+> Both handheld packages use the same `tools/paths.sh`: if muOS provides love/moonlight/keys, the app uses them; otherwise the `.muxapp` ships its own. `gptokeyb2` is bundled in both — muOS Moonlight does not include it.
 
-Change anything from the handheld (**START ▸ CONTROLLER PROFILES**), from the portal (SYSTEM ▸ CONTROLLER PROFILES) or
-the CLI:
+---
+
+## Controls (handheld)
+
+| Button | Library | Menus | Overlays |
+|---|---|---|---|
+| **D-pad ◀ ▶** | Prev / next cover | Change value | — |
+| **D-pad ▲ ▼** | Jump 4 covers | Move | Move |
+| **L1 / R1** | Switch tab | Prev / next section | — |
+| **A** | Play | Confirm | Select |
+| **X** | Favorite | — | — |
+| **Y** | Game menu | Switch profile (Controls) | — |
+| **M** | — | Guide | Guide |
+| **SELECT** | Sync | — | — |
+| **START** | Main menu | Close all | Close |
+| **B** | Exit | Back | Back |
+
+*Full controller mapping reference: [docs/CONTROLS.md](docs/CONTROLS.md).*
+
+---
+
+## Diagnostics
+
+### PC side
 ```bash
-spdw-stream profiles list
-spdw-stream profiles set GCPad muos Buttons/Z TL      # edit one binding
-spdw-stream profiles active Wiimote muos-nunchuk      # switch profile
-spdw-stream profiles apply --backup                   # write the active ones into Dolphin now
+spdw-stream preflight                    # 8 checks, exit 1 on critical failure
+spdw-stream cleanup covers               # Remove orphan cover PNGs
+spdw-stream config export ~/backup.json  # Backup config
+spdw-stream config import ~/backup.json  # Restore config
+spdw-stream status                       # Human-readable checks
 ```
 
-## No more black bars
+### Handheld side
+`START` ▸ Tools ▸ Connection test, Last stream log, Verify Sunshine apps, Measure latency, Export diagnostics.
 
-A 16:9 desktop is letterboxed on a 4:3 handheld, so 4:3 games end up small. While a game streams, Dolphin Rt:Stream switches
-the PC display to a **4:3 mode** (default `1280x960`, via `xrandr`, X11 only) and restores the original mode afterwards.
-Dolphin fills that mode, the stream fills the handheld screen, nothing is stretched. Configure it in
-**SYSTEM ▸ DISPLAY ▸ Stream display mode** (or keep the current mode). Stuck in 4:3 after a crash?
-`sh /usr/lib/spdw-stream-portal/display-mode.sh restore`.
+*Something broken? Start here: [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).*
 
-## Screenshots
+---
 
-| | |
-|---|---|
-| ![library](docs/img/portal-library.png) | ![services](docs/img/portal-services.png) |
-| ![system](docs/img/portal-system.png) | ![profiles](docs/img/portal-system-profiles.png) |
-| ![flow](docs/img/muos-flow.png) | ![controls](docs/img/muos-controls-gc.png) |
-| ![hotkeys](docs/img/muos-controls-hotkeys.png) | ![menu](docs/img/muos-menu.png) |
-| ![guide](docs/img/muos-guide.png) | ![server-status](docs/img/muos-server-status.png) |
+## Documentation
 
-Boot animation (frames): ![boot](docs/img/muos-boot.png)
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — How the two halves talk
+- **[docs/CONTROLS.md](docs/CONTROLS.md)** — Every controller mapping, in full
+- **[docs/PROTOCOL.md](docs/PROTOCOL.md)** — HTTP wire formats, token checks
+- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** — What to do when it doesn't work
+- **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** — Build, test, screenshots
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — How to send a pull request
+- **[SECURITY.md](SECURITY.md)** — Threat model, what's protected
+- **[CHANGELOG.md](CHANGELOG.md)** — Every release, in full
 
-*All cover art in the screenshots is generated demo art.*
+---
 
-## Repository layout
-
-```
-muos/DolphinStream/   handheld app (LÖVE/Lua + POSIX shell)         → copy to ROMS/APPLICATIONS
-pc/portal/            Tk portal, core, profile manager, helper scripts
-pc/profiles/          Dolphin controller profiles (GCPad / Wiimote / Hotkeys)
-pc/assets/            logos, cube sprites, Orbitron font (OFL)
-pc/standalone/        no-GUI script: scan ROMs, write Sunshine apps, serve the library
-pc/packaging/debian/  .deb metadata
-tools/                build-deb.sh, build-muos.sh
-tests/                unit tests + headless GUI tests
-docs/                 architecture, protocol, controls, troubleshooting, development
-```
-
-## Build and test from source
+## Build from source
 
 ```bash
-make test        # python unittest + headless Lua GUI tests (pip install lupa pillow; apt install python3-tk)
-make deb         # dist/spdw-stream-portal_<version>_all.deb
-make muos        # dist/DolphinStream-muOS-<version>.zip
+make test                                  # Python + headless Lua tests
+make deb                                   # dist/spdw-stream-portal_*.deb
+make muos                                  # dist/DolphinStream-muOS-*.zip
+bash tools/build-muxapp.sh                 # dist/Dolphin_RtStream-*.muxapp
 ```
-Details in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
+---
 
 ## Status
 
 | Area | Verified |
 |---|---|
-| Profile manager, server, token checks, standalone script | automated tests (CI) |
-| Handheld UI, boot animation, Controls screen | rendered with real LÖVE 11.5 (software GL) and a headless mock fuzz |
-| Handheld → PC profile edit | tested end-to-end (LÖVE app ↔ real library server) |
-| Search, pre-flight ping, health LEDs, guide panel | tested on MX Linux (desktop, windowed LÖVE 11.5) and on real RG35XX H hardware |
-| Dolphin `-C` fullscreen flags, hotkey/Wiimote key names, `xrandr` 4:3 switch, panel hiding, Moonlight pairing | written to Dolphin/Moonlight/XFCE conventions, **confirmed on real hardware for the base flow**; please report your device if something differs |
+| **PC portal, profile manager, server, token checks** | Automated tests (CI) |
+| **Handheld UI, boot, Controls** | LÖVE 11.5 + headless mock fuzz |
+| **Handheld → PC profile edit** | End-to-end |
+| **Search, pre-flight, LEDs, guide panel** | Tested on RG35XX H |
+| **Dolphin flags, hotkey names, xrandr 4:3, panel hiding, pairing** | Confirmed on real hardware (base flow) |
 
-## Credits and licenses
+---
 
-- Code: [MIT](LICENSE). Logos (Dolphin Rt:Core, Dolphin Rt:Stream, SPDW) © SPDW Factory Lab, not covered by the MIT license.
-- Font: [Orbitron](https://github.com/theleagueof/orbitron), SIL Open Font License 1.1 (`pc/assets/OFL-Orbitron.txt`).
-- Built on [Dolphin](https://dolphin-emu.org), [Sunshine](https://github.com/LizardByte/Sunshine),
-  [Moonlight](https://github.com/moonlight-stream), [LÖVE](https://love2d.org), cover art lookups on
-  [GameTDB](https://www.gametdb.com).
-- *GameCube* and *Wii* are trademarks of Nintendo. This project is not affiliated with or endorsed by Nintendo. The
-  GC/Wii logos used as small tab icons can be removed from `assets/` without affecting functionality.
-- **No ROMs, BIOS or firmware are included or distributed.** Use your own legally obtained backups.
+## Links
+
+- **Dolphin Rt:Core for muOS** — The emulator side
+- **GitHub repo · Releases**
+- **Dolphin · Sunshine · Moonlight · LÖVE · muOS**
+
+---
+
+## Cover art
+
+![Dolphin Rt:Stream mock cover art](docs/img/mock-cover.png)
+
+*Mock cover art for demonstration purposes. All game covers shown in screenshots are generated demo art.*
+
+---
+
+## License
+
+- **Code:** MIT — see [LICENSE](LICENSE)
+- **Logos (Dolphin Rt:Core, Dolphin Rt:Stream, SPDW):** © SPDW Factory Lab
+- **Font:** Orbitron — SIL OFL 1.1
+- GameCube and Wii are Nintendo trademarks; this project is not affiliated with or endorsed by Nintendo.
+- No ROMs, BIOS or firmware included. Use your own legally obtained backups.
+
+---
+
+<div align="center">
+
+**Dolphin Rt:Stream** · SPDW Factory Lab · *Streaming the Mecha-Dolphin. One handheld at a time.*
+
+</div>
