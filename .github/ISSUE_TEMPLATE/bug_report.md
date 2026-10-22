@@ -10,7 +10,7 @@ about: Something does not work (stream, black bars, controls, sync...)
 - Dolphin version (and install type: apt / Flatpak / AppImage):
 - Sunshine version:
 - Handheld + muOS version:
-- MockRt:Core version (portal title bar / `spdw-stream status`):
+- Dolphin Rt:Stream version (portal title bar / `spdw-stream status`):
 
 **Logs** (please redact IPs and the edit token)
 - Portal > LOG tab:

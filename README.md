@@ -1,13 +1,13 @@
-# MockRt:Core
+# Dolphin Rt:Stream
 
 **Stream GameCube and Wii games from your PC to a muOS handheld — with a GameCube-style 2.5D interface on both ends.**
 
-MockRt:Core keeps your ROMs and Dolphin on the PC, and turns your handheld (tested on the Anbernic RG35XX H) into a
+Dolphin Rt:Stream keeps your ROMs and Dolphin on the PC, and turns your handheld (tested on the Anbernic RG35XX H) into a
 console-like front end: a cover-flow library, a boot animation, and a streaming session through
 [Sunshine](https://github.com/LizardByte/Sunshine) / [Moonlight](https://github.com/moonlight-stream/moonlight-embedded).
 You can see **and edit the Dolphin controller mapping from the handheld itself**.
 
-![MockRt:Core on the handheld: library, controller mapping, menus](docs/img/muos-hero.png)
+![Dolphin Rt:Stream on the handheld: library, controller mapping, menus](docs/img/muos-hero.png)
 
 ## Highlights
 
@@ -31,7 +31,7 @@ You can see **and edit the Dolphin controller mapping from the handheld itself**
   apps, disk space, measure latency, controller profiles, reset (statistics / favorites / streaming / cover cache), about
 - 5 themes, on-screen keyboard, English UI, everything reachable with the handheld's own buttons
 
-**On the PC (MockRt:Core Stream Portal, `.deb`)**
+**On the PC (Dolphin Rt:Stream Portal, `.deb`)**
 - Scans your ROM folders **at every start** (and on demand), downloads cover art, registers one Sunshine app per game
 - Launches Dolphin **fullscreen, no main window, no desktop**; hides the XFCE panel while streaming
 - Switches the PC to a **4:3 display mode during the stream** so a 4:3 game fills the handheld screen (no black bars),
@@ -43,7 +43,7 @@ You can see **and edit the Dolphin controller mapping from the handheld itself**
 
 ```
  ┌──────────── PC (Linux, X11) ────────────┐                    ┌──────── Handheld (muOS) ────────┐
- │  MockRt:Core portal  ── scans ROMs      │   HTTP :8765       │  Dolphin Stream (LÖVE app)      │
+ │  Dolphin Rt:Stream portal  ── scans ROMs      │   HTTP :8765       │  Dolphin Stream (LÖVE app)      │
  │  Library server  ─────── library.tsv ───┼───────────────────▶│  cover flow, menus, Controls    │
  │                   ─────── profiles.tsv ─┼───────────────────▶│                                 │
  │                   ◀────── /ctl (token) ─┼────────────────────│  edit a binding                 │
@@ -67,7 +67,7 @@ More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · wire formats and se
 ### 1. PC
 ```bash
 sudo apt install ./spdw-stream-portal_<version>_all.deb       # pulls python3-tk, python3-pil, ...
-spdw-stream-portal                                            # or start it from the menu: "MockRt:Core Stream Portal"
+spdw-stream-portal                                            # or start it from the menu: "Dolphin Rt:Stream Portal"
 ```
 1. **LIBRARY**: add your GameCube / Wii ROM folders — the portal scans them right away (and at every start).
 2. **SERVICES**: install/start Sunshine, start the library server. Tick the autostart boxes you want.
@@ -124,7 +124,7 @@ spdw-stream profiles apply --backup                   # write the active ones in
 
 ## No more black bars
 
-A 16:9 desktop is letterboxed on a 4:3 handheld, so 4:3 games end up small. While a game streams, MockRt:Core switches
+A 16:9 desktop is letterboxed on a 4:3 handheld, so 4:3 games end up small. While a game streams, Dolphin Rt:Stream switches
 the PC display to a **4:3 mode** (default `1280x960`, via `xrandr`, X11 only) and restores the original mode afterwards.
 Dolphin fills that mode, the stream fills the handheld screen, nothing is stretched. Configure it in
 **SYSTEM ▸ DISPLAY ▸ Stream display mode** (or keep the current mode). Stuck in 4:3 after a crash?
@@ -179,7 +179,7 @@ Details in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ## Credits and licenses
 
-- Code: [MIT](LICENSE). Logos (Dolphin Rt:Core, MockRt:Core, SPDW) © SPDW Factory Lab, not covered by the MIT license.
+- Code: [MIT](LICENSE). Logos (Dolphin Rt:Core, Dolphin Rt:Stream, SPDW) © SPDW Factory Lab, not covered by the MIT license.
 - Font: [Orbitron](https://github.com/theleagueof/orbitron), SIL Open Font License 1.1 (`pc/assets/OFL-Orbitron.txt`).
 - Built on [Dolphin](https://dolphin-emu.org), [Sunshine](https://github.com/LizardByte/Sunshine),
   [Moonlight](https://github.com/moonlight-stream), [LÖVE](https://love2d.org), cover art lookups on

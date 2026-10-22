@@ -18,7 +18,7 @@ cd "$LOVEDIR" || exit
 
 SET_VAR "system" "foreground_process" "love"
 
-# cleanup globale su SIGTERM/SIGINT
+# global cleanup on SIGTERM/SIGINT
 cleanup_all() {
 	[ -n "$GPTK_PID" ] && kill -9 "$GPTK_PID" 2>/dev/null && wait "$GPTK_PID" 2>/dev/null
 	[ -n "$STREAM_GPTK_PID" ] && kill -9 "$STREAM_GPTK_PID" 2>/dev/null && wait "$STREAM_GPTK_PID" 2>/dev/null
@@ -35,13 +35,13 @@ while true; do
 	./$APP_BIN gui
 	kill -9 "$GPTK_PID" 2>/dev/null
 	wait "$GPTK_PID" 2>/dev/null
-	# sicurezza: kill di eventuali gptokeyb2 orfani legati a love
+	# safety: kill any orphan gptokeyb2 bound to love
 	pkill -f "gptokeyb2.*$APP_BIN" 2>/dev/null || true
 
 	[ -f "$LOVEDIR/launch.txt" ] || break
 	APP="$(cat "$LOVEDIR/launch.txt")"
 	rm -f "$LOVEDIR/launch.txt"
-	# difesa in profondità: rifiuta app con caratteri strani
+	# defense in depth: reject app names with odd characters
 	case "$APP" in
 		"") echo "invalid app name: empty" >&2; continue ;;
 	esac

@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import profiles as prof
 
-VERSION = "3.0.0"
+VERSION = "4.0.0"
 HOME = Path.home()
 CONF_DIR = Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config")) / "spdw-stream"
 CONF_FILE = CONF_DIR / "config.json"
@@ -152,15 +152,15 @@ def scan(dirs, kind, log=say):
     return games
 
 
-def shrink(path, maxh=280):
+def shrink(path, maxh=280, log=say):
     try:
         from PIL import Image
         im = Image.open(path).convert("RGBA")
         if im.height > maxh:
             im = im.resize((round(im.width * maxh / im.height), maxh), Image.LANCZOS)
         im.save(path, "PNG")
-    except Exception:
-        pass
+    except Exception as e:
+        log(f"  ! cover shrink failed {Path(path).name}: {e}")
 
 
 def local_cover(g):
@@ -216,7 +216,7 @@ def prepare_covers(games, out, refresh, online, log=say):
             if not got and online and g["id"]:
                 got = download_cover(g["id"], dest)
             if got:
-                shrink(dest)
+                shrink(dest, log=log)
         if got:
             g["cover"] = f"covers/{dest.name}"
             ok += 1
@@ -342,11 +342,38 @@ def server_running():
     return server_pid() is not None
 
 
+def _port_free(port):
+    """True if the TCP port is not already bound on 127.0.0.1."""
+    import socket as _sock
+    s = _sock.socket(_sock.AF_INET, _sock.SOCK_STREAM)
+    try:
+        s.setsockopt(_sock.SOL_SOCKET, _sock.SO_REUSEADDR, 1)
+        s.bind(("127.0.0.1", int(port)))
+        return True
+    except OSError:
+        return False
+    finally:
+        s.close()
+
+
 def server_start():
+    """Start the library server, wait up to 3s for it to bind the port."""
     if server_running():
-        return
+        return True
+    cfg = load_config()
+    port = int(cfg.get("port", 8765))
+    if not _port_free(port):
+        say(f"! port {port} is already in use by another process")
+        return False
     subprocess.Popen([sys.executable, str(SELF), "serve"], start_new_session=True,
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    import time as _t
+    for _ in range(30):
+        if not _port_free(port):
+            return True
+        _t.sleep(0.1)
+    say(f"! server did not bind port {port} within 3s")
+    return False
 
 
 def server_stop():
@@ -589,13 +616,20 @@ def dolphin_profiles_installed(cfg=None):
     return prof.installed(cfg)
 
 
+def _dolphin_running():
+    return subprocess.run(["pgrep", "-x", "dolphin-emu"], capture_output=True).returncode == 0
+
+
 def install_dolphin_profiles(cfg, activate=False, log=say):
     """Install the packaged profiles; with activate=True also write the active ones into Dolphin's config."""
+    if activate and _dolphin_running():
+        log("! Dolphin is running: close it before applying profiles (it would overwrite them on exit)")
+        return False
     if not prof.install(cfg, log):
         return False
     if activate:
         prof.apply(cfg, log, backup=True)
-        log("   activated on GC port 1 / Wiimote 1 / Hotkeys. Close Dolphin before this step.")
+        log("   activated on GC port 1 / Wiimote 1 / Hotkeys.")
     return True
 
 
@@ -642,7 +676,7 @@ def system_checks(cfg):
     ok = bool(first and shutil.which(first))
     res.append(("Dolphin", "ok" if ok else "bad", cfg["dolphin"] if ok else f"'{cfg['dolphin']}' not found"))
     fs = "Fullscreen=True" in str(cfg.get("dolphin_args", ""))
-    res.append(("Dolphin fullscreen", "ok" if fs else "warn", "on" if fs else "off: il gioco parte in finestra"))
+    res.append(("Dolphin fullscreen", "ok" if fs else "warn", "on" if fs else "off: game launches windowed"))
     if cfg.get("hide_panel"):
         xf = shutil.which("xfconf-query")
         res.append(("Hide XFCE panel", "ok" if xf else "warn", "during stream" if xf else "xfconf-query missing"))
@@ -728,6 +762,15 @@ def main():
     lg.add_argument("action", choices=["on", "off", "status"])
     lg.add_argument("--user", default=None)
 
+    ce = sub.add_parser("config", help="export or import config.json")
+    ce.add_argument("action", choices=["export", "import"])
+    ce.add_argument("file", nargs="?", help="path (export: target; import: source; default: stdout/XDG)")
+
+    cl = sub.add_parser("cleanup", help="remove orphan files")
+    cl.add_argument("what", choices=["covers"], nargs="?", default="covers")
+
+    sub.add_parser("preflight", help="run all system checks (exit 1 on critical failure)")
+
     args = ap.parse_args()
     cfg = load_config()
 
@@ -807,6 +850,48 @@ def main():
             user = args.user or _default_user()
             autologin_set(args.action == "on", user)
             print(f"autologin {args.action} ({user})")
+    elif args.cmd == "config":
+        if args.action == "export":
+            if args.file:
+                shutil.copyfile(CONF_FILE, args.file)
+                say(f"exported {CONF_FILE} -> {args.file}")
+            else:
+                sys.stdout.write(CONF_FILE.read_text(encoding="utf-8"))
+        else:
+            src = Path(args.file) if args.file else None
+            if not src or not src.exists():
+                sys.exit(f"! file not found: {src}")
+            data = json.loads(src.read_text(encoding="utf-8"))
+            merged = load_config()
+            merged.update(data)
+            save_config(merged)
+            say(f"imported {src} -> {CONF_FILE}")
+    elif args.cmd == "cleanup":
+        cfg = load_config()
+        out = lib_dir(cfg)
+        covers_dir = out / "covers"
+        if not covers_dir.exists():
+            sys.exit("! no covers folder")
+        keep = {Path(g["cover"]).name for g in load_library(cfg) if g.get("cover")}
+        removed = 0
+        freed = 0
+        for f in covers_dir.glob("*.png"):
+            if f.name not in keep:
+                freed += f.stat().st_size
+                f.unlink()
+                removed += 1
+        say(f"removed {removed} orphan cover(s), freed {freed // 1024} KB")
+    elif args.cmd == "preflight":
+        cfg = load_config()
+        bad = 0
+        for label, state, detail in system_checks(cfg):
+            mark = "OK" if state == "ok" else ("WARN" if state == "warn" else "FAIL")
+            print(f"[{mark:4}] {label}: {detail}")
+            if state == "bad":
+                bad += 1
+        if bad:
+            sys.exit(f"\n! {bad} critical issue(s)")
+        say("\nall critical checks passed")
 
 
 if __name__ == "__main__":

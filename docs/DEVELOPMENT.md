@@ -2,7 +2,7 @@
 
 ## Setup
 ```bash
-git clone https://github.com/SilverCrow2323/mockrt-core && cd mockrt-core
+git clone https://github.com/SilverCrow2323/dolphin-rt-stream && cd mockrt-core
 sudo apt install python3-tk zip              # Tk for the portal, zip for packaging
 pip install lupa pillow                      # lupa = headless Lua tests, pillow = portal graphics
 make lint test

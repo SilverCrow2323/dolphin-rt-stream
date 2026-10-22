@@ -1,6 +1,6 @@
 # Architecture
 
-MockRt:Core has two halves that only talk over HTTP (library, profiles) and Moonlight/Sunshine (video, audio, input).
+Dolphin Rt:Stream has two halves that only talk over HTTP (library, profiles) and Moonlight/Sunshine (video, audio, input).
 
 ```
 PC                                                          Handheld (muOS)

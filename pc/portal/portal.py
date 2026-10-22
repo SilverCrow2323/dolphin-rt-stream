@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MockRt:Core // Stream Portal - pannello di controllo PC (SPDW Factory Lab)."""
+"""Dolphin Rt:Stream // Stream Portal - pannello di controllo PC (SPDW Factory Lab)."""
 import getpass, os, queue, re, subprocess, sys, threading, webbrowser
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, font as tkfont
@@ -12,7 +12,7 @@ import profiles as prof
 try:
     import gcui
 except ImportError:
-    sys.exit("MockRt:Core Portal needs Pillow with ImageTk: sudo apt install python3-pil python3-pil.imagetk")
+    sys.exit("Dolphin Rt:Stream Portal needs Pillow with ImageTk: sudo apt install python3-pil python3-pil.imagetk")
 from gcui import BG, FACE, FACE_DK, VIOLET, CYAN, RT, TEXT, DIM, OK, WARN, BAD
 
 STATE_COL = {"ok": OK, "warn": WARN, "bad": BAD}
@@ -62,7 +62,7 @@ class FolderList(tk.Frame):
 class Portal(tk.Tk):
     def __init__(self, minimized=False):
         super().__init__()
-        self.title("MockRt:Core // Stream Portal")
+        self.title("Dolphin Rt:Stream // Stream Portal")
         self.geometry("1060x820")
         self.minsize(940, 740)
         self.configure(bg=BG)

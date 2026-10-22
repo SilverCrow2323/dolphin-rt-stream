@@ -1,6 +1,6 @@
 # Security
 
-MockRt:Core runs a small HTTP server on the PC (the *library server*) and can optionally write Dolphin controller
+Dolphin Rt:Stream runs a small HTTP server on the PC (the *library server*) and can optionally write Dolphin controller
 profiles on request of the handheld. Read [docs/PROTOCOL.md](docs/PROTOCOL.md) for the exact surface.
 
 Short version:

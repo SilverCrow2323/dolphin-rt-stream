@@ -303,8 +303,8 @@ local function doPlay(g)
   love.event.quit()
 end
 
--- Pre-flight: ping in background, max 1s, senza bloccare la UI.
--- Se ping manca sul sistema, scrive SKIP e lasciamo passare (graceful).
+-- Pre-flight: ping in background, max 1s, without blocking the UI.
+-- If ping is missing, write SKIP and let it pass.
 local function pingHostAsync(host)
   os.remove("/tmp/ds_ping.done")
   local cmd = string.format(
@@ -864,10 +864,10 @@ local function mainMenu()
       { t = "quick", icon = "sync", label = "Sync", color = { 1.00, 0.82, 0.30 },
         desc = "Download games and covers from the PC",
         guide = {
-          intro = "Sync downloads the game list and covers from MockRt:Core Stream Portal on the PC. All requirements below must be met before syncing.",
+          intro = "Sync downloads the game list and covers from Dolphin Rt:Stream Portal on the PC. All requirements below must be met before syncing.",
           values = {
             ["1"] = { desc = "Console connected via WiFi or LAN, with internet access", recommended = true },
-            ["2"] = { desc = "MockRt:Core Stream Portal installed and running on the PC", recommended = true },
+            ["2"] = { desc = "Dolphin Rt:Stream Portal installed and running on the PC", recommended = true },
             ["3"] = { desc = "Sunshine server enabled and running in the portal", recommended = true },
             ["4"] = { desc = "Library server enabled in the portal", recommended = true },
             ["5"] = { desc = "Port open in firewall and matching Sync port in START > Streaming", recommended = true },
@@ -1141,7 +1141,7 @@ press = function(b)
     return
   end
   if launching then return end
-  -- Overlay ha priorità assoluta: se è aperto, cattura TUTTI i tasti
+  -- Overlay has absolute priority: when open, it captures ALL keys
   if dlg then dlgPress(b); return end
   if guide then guidePress(b); return end
   if b == "guide" and (overlay or #menus > 0) then
@@ -1309,7 +1309,7 @@ function love.update(dt)
       if r then
         os.remove("/tmp/ds_ping.done")
         if r:match("FAIL") then
-          toast("PC " .. launching.host .. " non risponde. Tools > Connection test", "err")
+          toast("PC " .. launching.host .. " not responding. Tools > Connection test", "err")
           launching = nil
         else
           -- OK o SKIP (ping assente): prosegui
@@ -1771,7 +1771,7 @@ local function drawMenu(m)
 
   local y = 74
 
-  -- === HERO: cover 2.5D sinistra + PLAY grande + FAV/INFO affiancati ===
+  -- === HERO: 2.5D cover on the left + large PLAY + FAV/INFO side by side ===
   if m.hero and m.actions and nA > 0 then
     local hx, hy = 24, y
     local cw, ch = 100, 140
@@ -1822,7 +1822,7 @@ local function drawMenu(m)
     y = math.max(hy + ch, by + bh) + 10
   end
 
-  -- === QUICK (solo se non c'e' hero) ===
+  -- === QUICK (only if no hero) ===
   if not m.hero and nq > 0 then
     local qw = math.floor((W - 48 - 12) / 2)
     local qh = 62

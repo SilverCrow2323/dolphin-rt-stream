@@ -1,5 +1,5 @@
--- cfg.lua - impostazioni stream (conf/stream.conf), interfaccia (conf/ui.cfg),
--- statistiche/preferiti (conf/stats.tsv) e override per gioco (conf/games.tsv)
+-- cfg.lua - stream settings (conf/stream.conf), interface (conf/ui.cfg),
+-- stats/favorites (conf/stats.tsv) and per-game overrides (conf/games.tsv)
 local M = {}
 local base = ""
 
@@ -38,9 +38,9 @@ function M.split(line)
   return t
 end
 
--- Tiene solo caratteri innocui: i valori finiscono in un file sorgentato dalla shell.
--- Le virgolette doppie e singole NON sono ammesse nei valori: le sostituiamo con uno
--- spazio e segnaliamo il problema tramite il ritorno (false se qualcosa e' stato perso).
+-- Keeps only safe characters: values end up in a file sourced by the shell.
+-- Double and single quotes are NOT allowed in values: they are replaced with a space
+-- and a warning is returned (false if something was lost).
 local function safe(v)
   local s = tostring(v or "")
   local cleaned = s:gsub("[^%w%.%-_ :/=,@+%[%]]", " ")
@@ -82,7 +82,7 @@ end
 function M.resetStream()
   local host = M.s.HOST
   for k, v in pairs(M.defaults) do M.s[k] = v end
-  M.s.HOST = host                         -- l'IP del PC non si perde
+  M.s.HOST = host                         -- the PC IP is not lost
   M.saveStream()
 end
 

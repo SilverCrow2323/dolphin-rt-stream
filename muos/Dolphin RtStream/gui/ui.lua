@@ -1,5 +1,5 @@
--- ui.lua - tema GameCube 2.5D: piastre estruse, cubo 3D, icone dei tasti, sfondo animato.
--- Tutto disegnato a codice tranne i pochi PNG in assets/ (loghi, cubi, wordmark) e il font Orbitron.
+-- ui.lua - GameCube 2.5D theme: extruded plates, 3D cube, button icons, animated background.
+-- Everything drawn in code except the few PNGs in assets/ and the Orbitron font.
 local lg = love.graphics
 local M = {}
 M.W, M.H = 640, 480
@@ -124,7 +124,7 @@ function M.chip(str, x, y, col, a, font)
   return x + w + 8
 end
 
--- piastra estrusa (luce da in alto a sinistra): faccia + gradini di estrusione + ombra
+-- extruded plate (light from top-left): face + extrusion steps + shadow
 function M.plate(x, y, w, h, acc, o)
   o = o or {}
   local th = M.th
@@ -150,7 +150,7 @@ function M.plate(x, y, w, h, acc, o)
   lg.setLineWidth(1)
 end
 
--- spessore di una cover (facce superiore e destra, proiezione obliqua)
+-- cover thickness (top and right faces, oblique projection)
 function M.slab(x, y, w, h, acc, d, a)
   a = a or 1
   local dx, dy = d, -d * 0.7
@@ -159,7 +159,7 @@ function M.slab(x, y, w, h, acc, d, a)
   lg.setColor(t[1], t[2], t[3], a); lg.polygon("fill", x, y, x + dx, y + dy, x + w + dx, y + dy, x + w, y)
 end
 
--- fulmine a zig-zag (boot)
+-- zig-zag bolt (boot)
 function M.bolt(x1, y1, x2, y2, seg, jit, seed)
   local pts = { x1, y1 }
   local rnd = love.math.newRandomGenerator(seed or 1)
@@ -466,7 +466,7 @@ function M.footer(items, cy)
   lg.pop()
 end
 
--- ----------------------------------------------------------------- sfondo: gradiente, pavimento prospettico, cubi
+-- ----------------------------------------------------------------- background: gradient, perspective floor, cubes
 local cubes = {}
 function M.initBg()
   local r = love.math.newRandomGenerator(11)
@@ -482,12 +482,12 @@ end
 function M.bg(t, anim, top, bot)
   local th = M.th
   local W, H = M.W, M.H
-  for i = 0, 15 do                                  -- gradiente verticale a fasce
+  for i = 0, 15 do                                  -- vertical gradient by bands
     local k = i / 15
     local c = M.mix(M.mix(th.bg, th.panel, 0.55), th.bg, k)
     lg.setColor(c[1], c[2], c[3], 1); lg.rectangle("fill", 0, i * H / 16, W, H / 16 + 1)
   end
-  local vx, vy = W / 2, 150                         -- pavimento in prospettiva
+  local vx, vy = W / 2, 150                         -- perspective floor
   lg.setColor(th.line[1], th.line[2], th.line[3], 0.16)
   for i = -12, 12 do lg.line(vx + i * 8, vy, vx + i * 70, H) end
   for k = 1, 9 do

@@ -1,6 +1,6 @@
 -- boot.lua — sprite-based boot animation (12x10 grid, 120 frames).
--- Overlay: "Mock Rt Core" logo with electric flicker.
--- Falls back to classic cube animation if dolphin_scene.png is missing.
+-- Overlay: "Dolphin Rt:Stream" logo with electric flicker.
+-- Falls back to the classic cube animation if dolphin_scene.png is missing.
 local ui = require("ui")
 local lg = love.graphics
 
@@ -10,19 +10,19 @@ local canvas
 
 -- ===== SPRITE SHEET CONFIG =====
 local SPRITE_FILE   = "dolphin_scene.png"
-local SPRITE_COLS   = 12             -- colonne
-local SPRITE_ROWS   = 10             -- righe
-local SPRITE_FPS    = 32             -- frame al secondo
+local SPRITE_COLS   = 12             -- columns
+local SPRITE_ROWS   = 10             -- rows
+local SPRITE_FPS    = 32             -- frames per second
 local SPRITE_SCALE  = 1.0
 local SPRITE_Y       = 225            -- centro verticale
-local SPRITE_MAX_DIM = 620           -- se sprite più grande, auto-scale
-local SPRITE_FLASH_AT = 0.55         -- frazione di M.dur per il flash
+local SPRITE_MAX_DIM = 620           -- if larger, auto-scale
+local SPRITE_FLASH_AT = 0.55         -- fraction of M.dur for the flash
 
 -- ===== LOGO CONFIG =====
 local LOGO_FILE     = "mock_rt_logo.png"
 local LOGO_Y        = 95
 local LOGO_MAX_W    = 380
-local LOGO_FLICKER_T = 3.5           -- fine fase flicker (secondi)
+local LOGO_FLICKER_T = 3.5           -- end of flicker phase (seconds)
 -- ================================
 
 local sprite, sprite_frames, sprite_w, sprite_h
@@ -144,7 +144,7 @@ local function scene_sprite(bt)
         lg.rectangle("fill", 0, 0, W, H)
     end
 
-    -- LOGO "Mock Rt Core" con effetto elettrico (flicker)
+    -- LOGO "Dolphin Rt:Stream" con effetto elettrico (flicker)
     local mock_logo = ui.img(LOGO_FILE)
     local lp = ph(bt, 1.5, 2.0)
     if mock_logo and lp > 0 then
@@ -156,7 +156,7 @@ local function scene_sprite(bt)
         local drop = (1 - ui.outBounce(lp)) * -60
         local lx = W / 2
         local ly = LOGO_Y + drop
-        -- ombra
+        -- shadow
         lg.setColor(0, 0, 0, 0.35 * lp * flicker)
         lg.draw(mock_logo, lx + 2, ly + 2, 0, logo_scale, logo_scale, logo_w / 2, logo_h / 2)
         -- logo
