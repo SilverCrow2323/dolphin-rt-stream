@@ -265,3 +265,18 @@ bash tools/build-muxapp.sh                 # dist/Dolphin_RtStream-*.muxapp
 **Dolphin Rt:Stream** · SPDW Factory Lab · *Streaming the Mecha-Dolphin. One handheld at a time.*
 
 </div>
+
+## Visual vocabulary
+
+Icons used across the handheld UI (from `muos/*/gui/assets/`).
+
+| Icon | Name | Where it appears |
+|:---:|:---|:---|
+| <img src="docs/img/icons/gc.png" width="28"> | **GameCube** | GameCube tab, per-system chips |
+| <img src="docs/img/icons/wii.png" width="28"> | **Wii** | Wii tab, per-system chips |
+| <img src="docs/img/icons/star.png" width="24"> | **Favorite** | Favorites tab, per-game star |
+| <img src="docs/img/icons/logo.png" width="120"> | **Brand logo** | Boot animation, About |
+| <img src="docs/img/icons/mascot.png" width="28"> | **Dolphin mascot** | Library header (rotating in the original build) |
+
+---
+
