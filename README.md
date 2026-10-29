@@ -16,6 +16,9 @@
     <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="License">
   </p>
 </div>
+<div align="center">
+  <img src="https://github.com/SilverCrow2323/dolphin-rt-stream/blob/main/docs/img/mock-cover.jpeg" alt="Boxart" width="500" style="border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.3); margin-bottom: 8px;">
+</div>
 
 ---
 
@@ -25,39 +28,8 @@
 >
 > The handheld gets a **GameCube-style 2.5D library** with cover flow, a boot animation, and a streaming session. The PC keeps the ROMs, the emulator, and the controller mapping — but you can **edit that mapping from the handheld itself** without ever touching the PC's desktop.
 >
-> Part of the **[Dolphin Rt:Core for muOS](https://github.com/SilverCrow2323/Dolphin-Rt-Core)** ecosystem.
+> Part of the **[Dolphin Rt:Core](https://github.com/SilverCrow2323/Dolphin-Rt-Core)** ecosystem.
 
-![Dolphin Rt:Stream library](docs/img/muos-hero.png)
-
-<details open>
-<summary><b>What's new in 4.2.1</b></summary>
-
-**PC portal**
-- Renamed `MockRt:Core Stream Portal` → **Dolphin Rt:Stream PC Portal**
-- **Header LEDs** — SUNSHINE + LIBRARY always visible in the status bar (green / red / gray, live)
-- **Quick access buttons** in SYSTEM: Open Dolphin, config folder, GFX.ini, apps.json, Sunshine web UI, portal config
-- **`spdw-stream test-connection`** — ping LAN + WAN, check ports, suggest tuning
-- **RUN CONNECTION TEST** button in SYSTEM → LOG tab with checks + advice
-- **QUICK TOOLS** panel in SERVICES: splash toggle, rebuild library, refresh/cleanup covers, config export/import, quick folder access
-- **Splash boot** — 1.0s rotating cube animation (`--no-splash` or toggle in QUICK TOOLS)
-- `preflight` · `cleanup covers` · `config export|import` (from 4.0.0)
-- `server_start()` port precheck, `install_dolphin_profiles()` refuses if Dolphin is running
-
-**Handheld** (from 4.1.0)
-- Uses muOS Moonlight (`/opt/muos/share/application/Moonlight/`) for `love`, `libs/`, `moonlight/`, `keys/` — fallback to bundled copies
-- `gptokeyb2` stays bundled (not part of muOS Moonlight)
-- `tools/paths.sh` centralizes binary paths
-
-**Handheld** (from 3.5.0)
-- SERVER STATUS panel (SUNSHINE + LIBRARY LEDs, 15s refresh)
-- Pre-flight ping on `A` (clear error if PC is off)
-- Guide panel (**M** on any item, ✓ recommended / ▲ warning)
-- Search across the current tab
-- GameMenu hero: 2.5D cover + PLAY + FAV / INFO
-- Colored icons, uppercase section titles, tab icons in Controls
-</details>
-
----
 
 ## What it is / What it's not
 
@@ -66,7 +38,7 @@
 **It's not** — an emulator. The handheld never decodes a GameCube frame. The PC does all the rendering; Moonlight streams the video + virtual Xbox pad.
 
 ```
-PC (Linux, X11)                      Handheld (muOS)
+PC (Linux, X11)                      Handheld 
 ────────────────────                 ─────────────────────
 Dolphin ──render──▶ Sunshine          Moonlight ──▶ screen
 Sunshine :47989 ──H.264/H.265───────▶ Moonlight ──▶ pad
@@ -78,7 +50,7 @@ Profiles ◀──────── /ctl ──────────── e
 
 ## What's inside
 
-### Handheld (`muos/Dolphin RtStream/`)
+### Handheld (`Dolphin RtStream/`)
 
 | Feature | Notes |
 |---|---|
@@ -342,7 +314,7 @@ dolphin-rt-stream/
 </div>
 
 > [!NOTE]
-> **Part of the broader Dolphin Rt:Core for muOS project.**
+> **Part of the broader Dolphin Rt:Core project.**
 >
 > **Dolphin Rt:Core** is the emulator side: surgical tuning of GameCube & Wii execution on the Allwinner H700, three flavours of deployment (Comfort Zone, Bash Arsenal, Frontendone), and a compatibility database with 200+ tested titles.
 >
@@ -363,7 +335,7 @@ dolphin-rt-stream/
 
 ## Links & Resources
 
-- 🏛️ **[Dolphin Rt:Core for muOS](https://github.com/SilverCrow2323/Dolphin-Rt-Core)** — the emulator side of the family
+- 🏛️ **[Dolphin Rt:Core](https://github.com/SilverCrow2323/Dolphin-Rt-Core)** — the emulator side of the family
 - 🌐 **[GitHub Repository](https://github.com/SilverCrow2323/dolphin-rt-stream)**
 - 📦 **[Latest Releases](https://github.com/SilverCrow2323/dolphin-rt-stream/releases/latest)**
 - 📖 **[docs/INSTALL.md](docs/INSTALL.md)** — step-by-step install guide
@@ -372,14 +344,6 @@ dolphin-rt-stream/
 - 📖 **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** — what to do when it doesn't work
 - 💾 **[Official muOS Documentation](https://muos.dev)**
 - 🐬 **[Dolphin Emulator Project](https://dolphin-emu.org)**
-
----
-
-## Cover art
-
-![Mock cover](docs/img/mock-cover.png)
-
-*Mock cover art for demonstration purposes. All game covers shown in screenshots are generated demo art.*
 
 ---
 
